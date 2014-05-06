@@ -26,7 +26,7 @@ int print_run;
 int min_runs;
 
 //asking user questions
-askQuestions (&input_p, &perturb_response, &loop_response, &parameter_choice, &min_value, &max_value, &total_loops, &print_choice, &print_run, &min_runs);
+askQuestions (&input_p, &perturb_response, &loop_response, &parameter_choice, &min_value, &max_value, &total_loops, &print_choice, &print_run);
 
 //defining a time
 clock_t time;
@@ -43,13 +43,11 @@ for (int loop=0; loop<total_loops; loop++)
 	//giving values of varying parameters
 	if (parameter_choice.compare("N") == 0 and loop_response=='y')
 		{
-		min_runs = 10;
 		N = min_value + (int)(max_value - min_value)*loop/(total_loops-1);
 		changeParameters (N, "N", input_p);
 		}
 	else if (loop_response=='y')
 		{
-		min_runs = 10;
 		double loop_parameter = min_value + (max_value - min_value)*loop/(total_loops-1.0);
 		changeParameters (loop_parameter,parameter_choice, input_p);
 		}
@@ -74,6 +72,7 @@ for (int loop=0; loop<total_loops; loop++)
 	comp action_last = 1.0;
 	int runs_count = 0;
 	double runs_test = 1.0;
+	min_runs = 6;
 
 	//initializing phi (=p) according to choice in input_p
 	vec p_e(2*Eucdim);
@@ -237,6 +236,11 @@ for (int loop=0; loop<total_loops; loop++)
 			DDS.reserve(Eigen::VectorXi::Constant(2*Eucdim,DDS_to_reserve));
 			vec delta(2*Eucdim);  //delta=newphi-phi in Lowdim
 			vec d_p_e(2*Eucdim);
+			eigVec Cp(Eucdim);
+			for (unsigned long int j=0; j<Eucdim; j++)
+				{
+				Cp(j) = p_e(2*j) + i*p_e(2*j+1);
+				}
 
 			//setting action to zero, and defining quantities which split up action into its parts
 			action = 0.0;
@@ -248,19 +252,20 @@ for (int loop=0; loop<total_loops; loop++)
 			for (unsigned long int j = 0; j < Eucdim; j++)
 				{
 				unsigned int time_coord = intCoords(j,N_t)[0];
+				comp dtj = dt(j);
+				comp dtjm = dt(j-1);
 				comp siteMeasure = pow(a,dim-1)*Dt(j);//for sites in time
-				comp linkMeasure = pow(a,dim-1)*dt(j);//for links in time
-			
+				comp linkMeasure = pow(a,dim-1)*dtj;//for links in time
 				minusDS(2*j) = 0.0;//initializing to zero
 				minusDS(2*j+1) = 0.0;
 		
-				pot_l += -siteMeasure*lambda*pow(pow(p_e(2*j)+i*p_e(2*j+1),2)-pow(v,2),2)/8.0;
-				pot_e += -siteMeasure*epsilon*(p_e(2*j)+i*p_e(2*j+1)-v)/v/2.0;
+				pot_l += -siteMeasure*lambda*pow(pow(Cp(j),2)-pow(v,2),2)/8.0;
+				pot_e += -siteMeasure*epsilon*(Cp(j)-v)/v/2.0;
 				for (unsigned int k=1; k<dim; k++)
 					{
 					if (intCoords(j,N_t)[k]!=(N-1))
 						{
-						kinetic += -siteMeasure*pow(p_e(2*neigh(j,k,1,N_t))+i*p_e(2*neigh(j,k,1,N_t)+1)-p_e(2*j)-i*p_e(2*j+1),2.0)/pow(a,2)/2.0;
+						kinetic += -siteMeasure*pow(Cp(neigh(j,k,1,N_t))-Cp(j),2.0)/pow(a,2)/2.0;
 						}
 					}
 				if (time_coord==(N_t-1))
@@ -279,7 +284,7 @@ for (int loop=0; loop<total_loops; loop++)
 					}
 				else
 					{
-					kinetic += linkMeasure*pow(p_e(2*(j+1))+i*p_e(2*(j+1)+1)-p_e(2*j)-i*p_e(2*j+1),2)/pow(dt(j),2)/2.0;
+					kinetic += linkMeasure*pow(Cp(j+1)-Cp(j),2)/pow(dtj,2)/2.0;
 					if (time_coord==0)
 						{
 						if (input_p =='b' or input_p =='t' or input_p =='f') //bubble boundary conditions
@@ -301,37 +306,37 @@ for (int loop=0; loop<total_loops; loop++)
 							signed int sign = pow(-1,k);
 							signed int deltaSign = (sign-1)/2; //zero if sign=+1 and -1 if sign=-1
 							int direc = (int)k/2;
+							comp dtd = dt(j+deltaSign);
+							unsigned int neighb = neigh(j,direc,sign,N_t);
 							if(direc==0)
 								{
-						   		minusDS(2*j) += re(pow(a,dim-1)/dt(j+deltaSign))*p_e(2*(j+sign))-im(pow(a,dim-1)/dt(j+deltaSign))*p_e(2*(j+sign)+1);
-						   		minusDS(2*j+1) += re(pow(a,dim-1)/dt(j+deltaSign))*p_e(2*(j+sign)+1)+im(pow(a,dim-1)/dt(j+deltaSign))*p_e(2*(j+sign));
-								DDS.insert(2*j,2*neigh(j,0,sign,N_t)) = -re(pow(a,dim-1)/dt(j+deltaSign));
-								DDS.insert(2*j,2*neigh(j,0,sign,N_t)+1) = im(pow(a,dim-1)/dt(j+deltaSign));
-								DDS.insert(2*j+1,2*neigh(j,0,sign,N_t)) = -im(pow(a,dim-1)/dt(j+deltaSign));
-								DDS.insert(2*j+1,2*neigh(j,0,sign,N_t)+1) = -re(pow(a,dim-1)/dt(j+deltaSign));
+						   		minusDS(2*j) += re(pow(a,dim-1)*Cp(j+sign)/dtd);
+						   		minusDS(2*j+1) += im(pow(a,dim-1)*Cp(j+sign)/dtd);
+								DDS.insert(2*j,2*neighb) = -re(pow(a,dim-1)/dtd);
+								DDS.insert(2*j,2*neighb+1) = im(pow(a,dim-1)/dtd);
+								DDS.insert(2*j+1,2*neighb) = -im(pow(a,dim-1)/dtd);
+								DDS.insert(2*j+1,2*neighb+1) = -re(pow(a,dim-1)/dtd);
 						   		}
 							else
 								{
-								minusDS(2*j) += -re(siteMeasure/pow(a,2))*p_e(2*neigh(j,direc,sign,N_t))+im(siteMeasure/pow(a,2))*p_e(2*neigh(j,direc,sign,N_t)+1);
-								minusDS(2*j+1) += -re(siteMeasure/pow(a,2))*p_e(2*neigh(j,direc,sign,N_t)+1)-im(siteMeasure/pow(a,2))*p_e(2*neigh(j,direc,sign,N_t));
-								DDS.insert(2*j,2*neigh(j,direc,sign,N_t)) = re(siteMeasure)/pow(a,2);
-								DDS.insert(2*j,2*neigh(j,direc,sign,N_t)+1) = -im(siteMeasure)/pow(a,2);
-								DDS.insert(2*j+1,2*neigh(j,direc,sign,N_t)) = im(siteMeasure)/pow(a,2);
-								DDS.insert(2*j+1,2*neigh(j,direc,sign,N_t)+1) = re(siteMeasure)/pow(a,2);
+								minusDS(2*j) += -re(siteMeasure*Cp(neighb)/pow(a,2));
+								minusDS(2*j+1) += -im(siteMeasure*Cp(neighb)/pow(a,2));
+								DDS.insert(2*j,2*neighb) = re(siteMeasure)/pow(a,2);
+								DDS.insert(2*j,2*neighb+1) = -im(siteMeasure)/pow(a,2);
+								DDS.insert(2*j+1,2*neighb) = im(siteMeasure)/pow(a,2);
+								DDS.insert(2*j+1,2*neighb+1) = re(siteMeasure)/pow(a,2);
 								}				
 							}
-						comp temp0 = pow(a,dim-1)/dt(j) + pow(a,dim-1)/dt(j-1);
-						double temp1 = -2.0*(dimd-1.0)*p_e(2*j)/pow(a,2) - lambda*p_e(2*j)*(pow(p_e(2*j),2)-3.0*pow(p_e(2*j+1),2)-pow(v,2))/2.0 - epsilon/2.0/v;
-						double temp2 = -2.0*(dimd-1.0)*p_e(2*j+1)/pow(a,2) - lambda*p_e(2*j+1)*(3.0*pow(p_e(2*j),2)-pow(p_e(2*j+1),2)-pow(v,2))/2.0;
-						double temp3 = -2.0*(dimd-1.0)/pow(a,2) - lambda*(3.0*pow(p_e(2*j),2)-3.0*pow(p_e(2*j+1),2)-pow(v,2))/2.0;
-						double temp4 = 3.0*lambda*p_e(2*j)*p_e(2*j+1);	
-					
-						minusDS(2*j) += - re(siteMeasure)*temp1 + im(siteMeasure)*temp2 - re(temp0)*p_e(2*j) + im(temp0)*p_e(2*j+1);
-						minusDS(2*j+1) += -im(siteMeasure)*temp1 - re(siteMeasure)*temp2 -re(temp0)*p_e(2*j+1) -im(temp0)*p_e(2*j);			
-						DDS.insert(2*j,2*j) = re(siteMeasure)*temp3 + im(siteMeasure)*temp4 + re(temp0);
-						DDS.insert(2*j,2*j+1) = re(siteMeasure)*temp4 - im(siteMeasure)*temp3 -im(temp0);
-						DDS.insert(2*j+1,2*j) = -re(siteMeasure)*temp4 + im(siteMeasure)*temp3 + im(temp0);
-						DDS.insert(2*j+1,2*j+1) = re(siteMeasure)*temp3 + im(siteMeasure)*temp4 + re(temp0);
+						comp temp0 = pow(a,dim-1)/dtj + pow(a,dim-1)/dtjm;
+						comp temp1 = siteMeasure*(2.0*(dimd-1.0)*Cp(j)/pow(a,2) + (lambda/2.0)*Cp(j)*(pow(Cp(j),2)-pow(v,2)) + epsilon/v/2.0);
+						comp temp2 = siteMeasure*(2.0*(dimd-1.0)/pow(a,2) + (lambda/2.0)*(3.0*pow(Cp(j),2)-pow(v,2)));
+						
+						minusDS(2*j) += re(temp1 - temp0*Cp(j));
+						minusDS(2*j+1) += im(temp1 - temp0*Cp(j));			
+						DDS.insert(2*j,2*j) = re(-temp2 + temp0);
+						DDS.insert(2*j,2*j+1) = im(temp2 - temp0);
+						DDS.insert(2*j+1,2*j) = im(-temp2 + temp0);
+						DDS.insert(2*j+1,2*j+1) = re(temp2 + temp0); /////////sign
 						}
 					}
 				} //try replacing periodic boundary conditions with phi(boundary)=v, for all boundaries.
@@ -410,56 +415,6 @@ for (int loop=0; loop<total_loops; loop++)
 		} //closing "runs" while loop
 
 	//propagating euclidean solution back in minkowskian time
-	vec p_m(2*Minkdim),  vel(2*Minkdim), acc(2*Minkdim);
-	
-	//explicitly 2d
-	for (unsigned int j=0;j<N;j++)
-		{
-		unsigned int k = j*N_t;
-		unsigned int l = j*N_t_m;
-		p_m(2*l) = p_e(2*k);
-		p_m(2*l+1) = p_e(2*k+1);
-		vel(2*l) = 0.0;
-		vel(2*l+1) = 0.0;
-		acc(2*l) = 0.0; //as the time derivatives on both sides are zero - not certain about this.
-		acc(2*l+1) = 0.0;
-		}
-	
-	for (unsigned int j=0;j<N;j++)
-		{
-		unsigned int l = j*N_t_m;
-		p_m(2*(l+1)) = p_m(2*l) - vel(2*l)*b + acc(2*l)*pow(b,2)/2.0;
-		p_m(2*(l+1)+1) = p_m(2*l+1) - vel(2*l+1)*b + acc(2*l+1)*pow(b,2)/2.0;
-		}
-		
-	for (unsigned int j=0;j<N;j++)
-		{
-		unsigned int l = j*N_t_m;
-		acc(2*(l+1)) += -2.0*(dimd-1.0)*p_m(2*(l+1))/pow(a,2) - lambda*p_m(2*(l+1))*(pow(p_m(2*(l+1)),2)-3.0*pow(p_m(2*(l+1)+1),2)-pow(v,2))/2.0 - epsilon/2.0/v;
-		acc(2*(l+1)+1) += -2.0*(dimd-1.0)*p_m(2*(l+1)+1)/pow(a,2) - lambda*p_m(2*(l+1)+1)*(3.0*pow(p_m(2*(l+1)),2)-pow(p_m(2*(l+1)+1),2)-pow(v,2))/2.0;	
-		for (unsigned int k=1; k<2*dim; k++) //over neighbours in both directions
-			{
-			signed int sign = pow(-1,k);
-			int direc = (int)k/2;
-			acc(2*(l+1)) += p_e(2*neigh(l+1,direc,sign,N_t))/pow(a,2);
-			acc(2*(l+1)+1) += p_e(2*neigh(l+1,direc,sign,N_t)+1)/pow(a,2);
-			}
-		vel(2*(l+1)) = vel(2*l) + (acc(2*l) + acc(2*(l+1)))*b/2.0;
-		vel(2*(l+1)+1) = vel(2*l+1) + (acc(2*l+1) + acc(2*(l+1)+1))*b/2.0;
-		}
-	
-	vec p(2*Totdim); //assigning full phi vector
-	for (lint j=0; j<Totdim; j++)
-		{
-		if (j<Minkdim)
-			{
-			p(2*j) = p_m(2*j);
-			p(2*j+1) = p_m(2*j+1);
-			}
-		else
-		p(2*Minkdim+2*j) = p_e(2*j);
-		p(2*Minkdim+2*j+1) = p_e(2*j+1);
-		}
 
 	//stopping clock
 	time = clock() - time;
@@ -495,7 +450,7 @@ for (int loop=0; loop<total_loops; loop++)
 			{
 			f << setw(15) << re(coord(j,r)) << setw(15) << im(coord(j,r));
 			}
-		f << setw(15) << p(2*j) << setw(15) << p(2*j+1) << endl;	
+		f << setw(15) << p_e(2*j) << setw(15) << p_e(2*j+1) << endl;	
 		}
 	f.close();
 

@@ -103,8 +103,8 @@ double solidAngle(const int& dimension)
 	}
 
 
-//gives integer (t,x,y,...) coordinates from the single location number i
-intVec intCoords(const lint& locNum, const unsigned int& Nt)
+//gives integer (t,x,y,...) coordinates from the single location number i - works in arbitrary dimensions
+intVec intCoordsDim(const lint& locNum, const unsigned int& Nt)
 	{
 	intVec intCoordVector(dim);
 	intVec param(dim);
@@ -123,6 +123,15 @@ intVec intCoords(const lint& locNum, const unsigned int& Nt)
 			}
 		}
 	return intCoordVector;
+	}
+	
+//gives integer (t,x,y,...) coordinates from the single location number i - only works in dim=2
+intVec intCoords(const lint& locNum, const unsigned int& Nt)
+	{
+	intVec XintCoords(2);
+	XintCoords[1] = (int)locNum/Nt;
+	XintCoords[0] = locNum - Nt*XintCoords[1];
+	return XintCoords;
 	}
 
 //gives values of coordinates in euclidean part
@@ -277,7 +286,7 @@ void coutStringLong (const vector<string>& labels)
 
 
 //asks user questions about how what they want the program to do
-void askQuestions (char * inputP, char * perturbResponse, char * loopResponse, string * parameterChoice, int * minValue, int * maxValue, int * totalLoops, char * printChoice, int * printRun, int * minRuns)
+void askQuestions (char * inputP, char * perturbResponse, char * loopResponse, string * parameterChoice, int * minValue, int * maxValue, int * totalLoops, char * printChoice, int * printRun)
 	{
 	cout << "spherical bubble, periodic instanton, true vacuum or false vacuum (b,p,t,f)?" << endl;
 	cin >> *inputP;
@@ -303,9 +312,6 @@ void askQuestions (char * inputP, char * perturbResponse, char * loopResponse, s
 			cout << "choose run to print" << endl;
 			cin >> *printRun;
 			}
-		cout << "choose minimum runs" << endl;
-		cin >> *minRuns;
-		cout << endl;
 		}
 	}
 
@@ -501,26 +507,23 @@ void convergenceQuestions (const int& runsCount, double* runsTest, const int min
 		{
 		cout << "number of newton-raphson loops = " << runsCount << endl;
 		*Wait = Clock;
+		cout << "print phi and action on the next loop? (y/n)" << endl;
+		cin >> *printWait;
+		if (*printWait == 'y')
+			{
+			*printChoice = 'p';
+			*printRun = runsCount+1;
+			cout << left;
+			cout << "kinetic = " << Kinetic << endl;
+			cout << "pot_lambda = " << potL << endl;
+			cout << "pot_epsilon = " << potE << endl;
+			cout << "action = " << Action << endl;
+			}
 		cout << "stop this looping and move on? (y/n)" << endl;
 		cin >> *stopWait;
 		if ( *stopWait == 'y')
 			{
 			*runsTest = 0;
-			}
-		else
-			{
-			cout << "print phi and action on the next loop? (y/n)" << endl;
-			cin >> *printWait;
-			if (*printWait == 'y')
-				{
-				*printChoice = 'p';
-				*printRun = runsCount+1;
-				cout << left;
-				cout << "kinetic = " << Kinetic << endl;
-				cout << "pot_lambda = " << potL << endl;
-				cout << "pot_epsilon = " << potE << endl;
-				cout << "action = " << Action << endl;
-				}
 			}
 		}
 	}
