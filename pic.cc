@@ -66,7 +66,7 @@ for (int loop=0; loop<total_loops; loop++)
 	double S_1 = 2.0*pow(mass,3)/3.0/lambda;
 	double twaction = -solidAngle(dim)*epsilon*pow(R,dimd)/dimd + solidAngle(dim)*pow(R,dimd-1.0)*S_1;
 	double eigen_zero;
-	int alpha = 20; //gives span over which tanh is used
+	int alpha = 15; //gives span over which tanh is used
 
 	//defining some quantities used to stop the Newton-Raphson loop when action stops varying
 	comp action_last = 1.0;
@@ -307,18 +307,18 @@ for (int loop=0; loop<total_loops; loop++)
 							signed int deltaSign = (sign-1)/2; //zero if sign=+1 and -1 if sign=-1
 							int direc = (int)k/2;
 							comp dtd = dt(j+deltaSign);
-							unsigned int neighb = neigh(j,direc,sign,N_t);
 							if(direc==0)
 								{
-						   		minusDS(2*j) += re(pow(a,dim-1)*Cp(j+sign)/dtd);
-						   		minusDS(2*j+1) += im(pow(a,dim-1)*Cp(j+sign)/dtd);
-								DDS.insert(2*j,2*neighb) = -re(pow(a,dim-1)/dtd);
-								DDS.insert(2*j,2*neighb+1) = im(pow(a,dim-1)/dtd);
-								DDS.insert(2*j+1,2*neighb) = -im(pow(a,dim-1)/dtd);
-								DDS.insert(2*j+1,2*neighb+1) = -re(pow(a,dim-1)/dtd);
+						   		minusDS(2*j) += re(a*Cp(j+sign)/dtd);
+						   		minusDS(2*j+1) += im(a*Cp(j+sign)/dtd);
+								DDS.insert(2*j,2*(j+sign)) = -re(a/dtd);
+								DDS.insert(2*j,2*(j+sign)+1) = im(a/dtd);
+								DDS.insert(2*j+1,2*(j+sign)) = -im(a/dtd);
+								DDS.insert(2*j+1,2*(j+sign)+1) = -re(a/dtd);
 						   		}
 							else
 								{
+								unsigned int neighb = neigh(j,direc,sign,N_t);
 								minusDS(2*j) += -re(siteMeasure*Cp(neighb)/pow(a,2));
 								minusDS(2*j+1) += -im(siteMeasure*Cp(neighb)/pow(a,2));
 								DDS.insert(2*j,2*neighb) = re(siteMeasure)/pow(a,2);
@@ -327,11 +327,11 @@ for (int loop=0; loop<total_loops; loop++)
 								DDS.insert(2*j+1,2*neighb+1) = re(siteMeasure)/pow(a,2);
 								}				
 							}
-						comp temp0 = pow(a,dim-1)/dtj + pow(a,dim-1)/dtjm;
+						comp temp0 = a/dtj + a/dtjm;
 						comp temp1 = siteMeasure*(2.0*(dimd-1.0)*Cp(j)/pow(a,2) + (lambda/2.0)*Cp(j)*(pow(Cp(j),2)-pow(v,2)) + epsilon/v/2.0);
 						comp temp2 = siteMeasure*(2.0*(dimd-1.0)/pow(a,2) + (lambda/2.0)*(3.0*pow(Cp(j),2)-pow(v,2)));
 						
-						minusDS(2*j) += re(temp1 - temp0*Cp(j));
+						minusDS(2*j) += re(temp1 - temp0*Cp(j)); /////errors here
 						minusDS(2*j+1) += im(temp1 - temp0*Cp(j));			
 						DDS.insert(2*j,2*j) = re(-temp2 + temp0);
 						DDS.insert(2*j,2*j+1) = im(temp2 - temp0);
@@ -350,15 +350,31 @@ for (int loop=0; loop<total_loops; loop++)
 				{
 				if (print_choice=='m')
 					{
-					cout << left;
-					for (unsigned long int j=0; j<Eucdim; j++)
+					ofstream g;
+					g.open("./data/DDS.dat");
+					g << left;				
+					for (unsigned int k=0; k<2*Eucdim; k++)
 						{
-						for (unsigned long int k=0; k<Eucdim; k++)
+						for (Eigen::SparseMatrix<double>::InnerIterator it(DDS,k); it; ++it)
 							{
-							cout << setw(7)  << setprecision(0) << fixed << DDS.coeffRef(2*j,2*k);
+							if (it.value()!=0)
+								{
+								g << setw(15) << setprecision(0) << it.row()+1 << setw(15) << it.col()+1 << setw(25) << setprecision(12) << it.value() << endl;
+								}
 							}
-						cout << endl;
 						}
+					g.close();
+					cout << print_choice << " printed on run " << print_run << endl;
+
+					//cout << left;
+					//for (unsigned long int j=0; j<Eucdim; j++)
+					//	{
+					//	for (unsigned long int k=0; k<Eucdim; k++)
+					//		{
+					//		cout << setw(7)  << setprecision(0) << fixed << DDS.coeffRef(2*j,2*k);
+					//		}
+					//	cout << endl;
+					//	}
 					}
 				else if (print_choice=='p')
 					{
@@ -429,15 +445,7 @@ for (int loop=0; loop<total_loops; loop++)
 		coutStringLong(long_labels);
 		}
 	cout << left << setw(8) << dim  << setw(8) << N << setw(8) << X << setw(8) << runs_count << setw(8) << realtime << setw(20) << re(action) << setw(20) << im(action) << setw(20) << log_det_DDS << setw(20) << eigen_zero << endl;
-
-	//printing action value
-	ofstream actionfile;
-	actionfile.open ("./data/action_pic.dat", ios::out | ios::app );
-	actionfile << left << setw(8) << dim  << setw(8) << N << setw(8) << X << setw(8) << runs_count << setw(8) << realtime << setw(20) << re(action) << setw(20) << im(action) << setw(20) << log_det_DDS << setw(20) << eigen_zero << endl;
-	actionfile.close();
-
-	//printing output phi
-	string opathway = ("./data/");
+string opathway = ("./data/");
 	string ofilename = "phi_pic";
 	string oextension = (".dat");
 	string outfile = opathway+ofilename+to_string(loop)+oextension;
@@ -453,6 +461,11 @@ for (int loop=0; loop<total_loops; loop++)
 		f << setw(15) << p_e(2*j) << setw(15) << p_e(2*j+1) << endl;	
 		}
 	f.close();
+	//printing action value
+	ofstream actionfile;
+	actionfile.open ("./data/action_pic.dat", ios::out | ios::app );
+	actionfile << left << setw(8) << dim  << setw(8) << N << setw(8) << X << setw(8) << runs_count << setw(8) << realtime << setw(20) << re(action) << setw(20) << im(action) << setw(20) << log_det_DDS << setw(20) << eigen_zero << endl;
+	actionfile.close();
 
 } //closing parameter loop
 

@@ -138,7 +138,7 @@ intVec intCoords(const lint& locNum, const unsigned int& Nt)
 eigVec coords(const lint& locNum)
 	{
 	eigVec coordVector (dim);
-	coordVector[0] = i*(-L_t + b*intCoords(locNum,N_t)[0]);
+	coordVector[0] = i*(L_t - b*intCoords(locNum,N_t)[0]);
 	for (int k=1; k<dim; k++)
 		{
 		coordVector[k] = -L/2.0 + a*intCoords(locNum,N_t)[k];
@@ -152,7 +152,7 @@ comp coord(const lint& locNum, const int& direction)
     comp coordinate;
     if (direction == 0)
         {
-		coordinate = i*(-L_t + b*intCoords(locNum,N_t)[0]);
+		coordinate = i*(L_t - b*intCoords(locNum,N_t)[0]);
         }
     else
         {

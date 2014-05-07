@@ -290,8 +290,8 @@ double small = p_e(0);
 					int direc = (int)k/2;
 					if(direc==0)
 						{
-		           		minusDS(i) += measure*p_e(neigh(i,0,sign))/pow(b,2.0);
-						DDS.insert(i,neigh(i,0,sign)) = -measure/pow(b,2.0);
+		           		minusDS(i) += measure*p_e(i+sign)/pow(b,2.0);
+						DDS.insert(i,i+sign) = -measure/pow(b,2.0);
 		           		}
 					else
 						{
