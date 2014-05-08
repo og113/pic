@@ -361,7 +361,7 @@ double small = p_e(0);
 
 
 //assigning values to phi
-	p += delta;
+	p_e += delta;
 	
 	bool smallLoc = false;
 
@@ -395,10 +395,10 @@ bool stopper = true;
 			d_p_e(i) = p_e(neigh(i,1,1))-p_e(i);
 			}
 		double norm;
-		norm = d_p.dot(d_p);
+		norm = d_p_e.dot(d_p_e);
 		vec temp_v;
-		temp_v = DDS*d_p;
-		eigen_zero = temp_v.dot(d_p);
+		temp_v = DDS*d_p_e;
+		eigen_zero = temp_v.dot(d_p_e);
 		eigen_zero /= norm;
 //		cout << "x-translation zero mode eigenvalue = " << eigen_zero << endl;
 			}

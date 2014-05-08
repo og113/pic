@@ -304,9 +304,12 @@ for (int loop=0; loop<total_loops; loop++)
 						for (unsigned int k=0; k<2*dim; k++) //over neighbours in both directions
 							{
 							signed int sign = pow(-1,k);
-							signed int deltaSign = (sign-1)/2; //zero if sign=+1 and -1 if sign=-1
 							int direc = (int)k/2;
-							comp dtd = dt(j+deltaSign);
+							comp dtd = dtj;
+							if (sign==-1)
+								{
+								dtd = dtjm;
+								}
 							if(direc==0)
 								{
 						   		minusDS(2*j) += re(a*Cp(j+sign)/dtd);
@@ -328,15 +331,15 @@ for (int loop=0; loop<total_loops; loop++)
 								}				
 							}
 						comp temp0 = a/dtj + a/dtjm;
-						comp temp1 = siteMeasure*(2.0*(dimd-1.0)*Cp(j)/pow(a,2) + (lambda/2.0)*Cp(j)*(pow(Cp(j),2)-pow(v,2)) + epsilon/v/2.0);
+						comp temp1 = siteMeasure*(2.0*(dimd-1.0)*Cp(j)/pow(a,2) + (lambda/2.0)*Cp(j)*( pow(Cp(j),2) - pow(v,2) ) + epsilon/v/2.0);
 						comp temp2 = siteMeasure*(2.0*(dimd-1.0)/pow(a,2) + (lambda/2.0)*(3.0*pow(Cp(j),2)-pow(v,2)));
 						
-						minusDS(2*j) += re(temp1 - temp0*Cp(j)); /////errors here
+						minusDS(2*j) += re(temp1 - temp0*Cp(j));
 						minusDS(2*j+1) += im(temp1 - temp0*Cp(j));			
 						DDS.insert(2*j,2*j) = re(-temp2 + temp0);
 						DDS.insert(2*j,2*j+1) = im(temp2 - temp0);
 						DDS.insert(2*j+1,2*j) = im(-temp2 + temp0);
-						DDS.insert(2*j+1,2*j+1) = re(temp2 + temp0); /////////sign
+						DDS.insert(2*j+1,2*j+1) = re(-temp2 + temp0); //sign of first term
 						}
 					}
 				} //try replacing periodic boundary conditions with phi(boundary)=v, for all boundaries.

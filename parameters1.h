@@ -32,7 +32,7 @@ double R = 100.0; //size of bubble
 double mass = 1.0; 
 double epsilon = pow(10.0,-4.0); //energy difference
 double L_te = 1.2*R; //total euclidean time size of lattice
-double L_tm = 1.5*L+t; //total minkowskian time size of lattice
+double L_tm = 1.5*L_te; //total minkowskian time size of lattice
 
 //derived quantities
 double theta = asin(L_te/2.0/R); //angle at which circles meet
